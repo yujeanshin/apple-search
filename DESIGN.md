@@ -9,18 +9,20 @@
 * [**overview**](#overview)
 
     * [game description](#game-description)
-
     * [context and motivation](#context-and-motivation)
-
     * [assumptions](#assumptions)
-
     * [goals](#goals)
-
     * [non-goals](#non-goals)
 
 * [**design and implementation**](#heading=h.dqe41xqxxwm4)
 
-    * [strategies](#strategies)
+    * [structure](#structure)
+
+    * [detailed design](#detailed-design)
+        * [core.py](#corepy)
+        * [algorithms/](#algorithms)
+        * [evals/](#evals)
+        * [tests/](#tests)
 
 # overview
 
@@ -37,7 +39,7 @@ The user can select rectangular portions of the grid by click-and-drag. If the a
 ![][image2]  
 A screenshot of a possible move from a later stage in the game -->
 
-The user’s final score is the number of apples removed from the board. The user has 2 minutes to consume as many apples as possible, and a timer on the right counts down the remaining time.
+The user has 2 minutes to consume as many apples as possible, and a timer on the right counts down the remaining time. The user’s final score is the number of apples removed from the board. The game ends when the timer runs out or when there are no legal moves remaining.
 
 ## context and motivation
 
@@ -47,13 +49,13 @@ I’ve played this game for a couple years now, and I’ve developed a couple of
 
 - focusing on removing 9’s
 - preferring clearing a few apples at a time
-- preferring clearing apples on the edges over apples in the center
+- preferring clearing apples that have fewer selection options
 
 However, I haven’t verified whether these are actually effective. I’m also curious how much I can improve the score from a baseline greedy algorithm.
 
 ## assumptions
 
-In this project, I will focus on a smaller board of 5 x 8\. In the future, I may extend this project to larger versions of the board.
+In this project, I will focus on a smaller board of 6 x 10\. In the future, I will extend this project to larger versions of the board.
 
 The exact setup of the game is unclear since the game’s code is not publicly available. I make the following assumptions:
 
@@ -85,48 +87,65 @@ The following could be interesting avenues to explore but are not the focus of t
 
 # design and implementation
 
-Filetree sketch:
+## Structure
+
 ```
+filetree sketch:
 .
 ├── README.md
 ├── DESIGN.md
 ├── core.py
 ├── algorithms/
 │   ├── base.py
-│   ├── bfs.py
-│   ├── dfs.py
+│   ├── exhaustive.py
 │   ├── greedy-fewest.py
 │   ├── greedy-greatest.py
 │   └── random_play.py
-├── benchmarks/
+├── evals/
 │   ├── make_suite.py
 │   ├── run_benchmark.py
 │   ├── suites/
 │   │   └── [json files of benchmark suites]
 │   └── results/
-│       └── [results of the benchmarks]
+│       └── [json files of the benchmarks]
 └── tests/
     └── test_algorithms.py
 ```
 
-The main mechanics of the project are in the following files.
-| File | Purpose |
-| :---- | :---- |
-| `core.py` | constants for board size Board class Tracks current state, current score, sum of remaining apples Move class Holds coordinates for the top left and bottom right corners of a rectangular selection Ordered such that we can sort moves chronologically Encoding boards and moves Board generation Verifying moves Applying moves |
-| `algorithms/ base.py` | algorithm class |
-| `algorithms/..` | specifications of algorithms |
+## detailed design
+### core.py
+This file contains core components of the game.
+- `Board` class to track board state
+- random board generation
+- `Move` class to hold a legal move, with as tight a selection as possible
+- `Sequence` class to hold sequences of moves in chronological order
+- board and move str encoding
+- move verifiaction and application
 
 
-## strategies
+### algorithms/
+`base.py` stores the algorithm class. The other files in this folder store the specifics of other algorithms.
 
-BFS is optimal, so it will give us our best possible score. We use it on a small board (3 x 5\) for some initial context on other algorithms’ performance. Of course, BFS will be too inefficient to run on larger grids, such as the game’s original 10 x 17 grid or our planned 5 x 8 grid.
+`exhaustive.py`: The baseline is an exhaustive search with DFS that finds the best score for a given board. This is a reference for comparison with other search methods.
 
+We define a board's (best) score as max(apples cleared by a move, best score of the resulting board) over its legal moves. A board with no legal moves has a score of 0. We find board scores recursively. To avoid redundant computation, we store each board position we reach and reuse answers where possible.
+
+Other initial strategies we want to implement are
 | option | algorithm |
 | :---- | :---- |
-| BFS | standard breadth-first search |
-| DFS | standard depth-first search |
-| greedy (fewest apples) | take a valid move that clears the fewest apples Break ties by choosing a move with the smallest rectangular selection by area Break ties by choosing the move whose upper left corner of the rectangle comes first in the grid |
-| greedy (greatest apples) | take a valid move that clears the most apples Break ties by choosing a move with the largest rectangular selection by area Break ties by choosing the move whose upper left corner of the rectangle comes first in the grid |
-| random | choose a random move out of all possible moves |
+| random | Choose a random legal move until there are no legal removes remaining. |
+| greedy (fewest apples) | take a valid move that clears the fewest apples <br> break ties by choosing a move with the smallest rectangular selection by area <br> break ties by choosing a random legal move |
+| greedy (greatest apples) | take a valid move that clears the most apples <br> break ties by choosing a move with the largest rectangular selection by area  <br> break ties by choosing a random move |
 
+Deterministic algorithms are only conducted once for a given board. Stochastic algorithms run 5 times for a given board, and we take the max score.
+
+### evals/
+
+`make_suite.py`: Create suites of randomly generated boards to standardize algorithm evaluation. We use 200 boards as the default.
+
+To reproduce results, we store suites in `./benchmarks/suites/` as .json files. 
+
+`run_benchmark.py`: Calculates an algorithm's score, fraction of optimal score, and time elapsed for each board in a benchmark suite. To keep a record of results, we store results in `./benchmarks/results` as json files.
+
+### tests/
 
