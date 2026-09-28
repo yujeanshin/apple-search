@@ -155,8 +155,8 @@ Other initial strategies we want to implement are
 | random | Choose a random legal move until there are no legal moves remaining. |
 | move_fewest | Choose the move that clears the fewest apples. |
 | move_most | Choose the move that clears the most apples. |
-| large_nums | Choose the move with the largest numbers. <br> Sort each move's numbers from largest to smallest. Compare only the first 2 apples. |
-| constrained_first | Count the number of moves that include each apple. <br> Sort each move's number-of-moves-per-apple counts from lowest to highest. <br> Choose the move with the lowest counts. When comparing moves with different numbers of apples, only consider the $\text{min(number of apples in a move)}$ lowest counts. |
+| large_nums | Choose the move with the largest numbers. <br> Sort each move's numbers from largest to smallest. Compare only the first $\text{min(number of apples in a move)}$ apples. |
+| constrained_first | Count the number of moves that include each apple. <br> Sort each move's number-of-moves-per-apple counts from lowest to highest. <br> Choose the move with the lowest counts. Compare only the $\text{min(number of apples in a move)}$ lowest counts. |
 | combination | We do several combinations of algorithms as mentioned in the evals/ section. <br> A combination of algorithms A and B into `A -> B -> random` will first find best moves for A; among those, keep the best under B; and then pick at random.
 
 We break ties by random choice.
@@ -170,9 +170,9 @@ We make suites of ~20 boards for debugging purposes; these results are not store
 
 We use [TBD] number of boards for the main evaluations. Suites (boards and corresponding optimums) are stored in `evals/suites/` as .json files.
 
-`run_benchmark.py`: runs algorithms on a benchmark suite. We use a derived seed for each {suite, board, algorithm, trial} combination. We calculate an algorithm's score, difference from the optimal score, and time elapsed for each board in a benchmark suite. We compute the total score here, but validity of moves is checked in `core.py`.
+`run_benchmark.py`: runs algorithms on a benchmark suite. We use a derived seed for each {suite, board, algorithm, trial} combination. We calculate an algorithm's score, difference from the optimal score, and time elapsed for each board in a benchmark suite. run_benchmark.py computes the total score but runs each move through core.py, which rejects illegal moves.
 
-Exhaustive search is deterministic, so it runs once per board. We run $n$ trials of stochastic algorithms per board and record the mean and stdev for each metric. We also estimate the "best of $k$ trials" score for $k\leq n$ from those $n$ trials. ($n$ is undetermined as of writing this initial design doc because I'm not sure what statistical tests to use.)
+Exhaustive search is deterministic, so it runs once per board. We run $n$ trials of stochastic algorithms per board and record the mean and stdev for each metric. We also estimate the "best of $k$ trials" score for $k\leq n$ from those $n$ trials. (TBD: I'll decide on $n$ after determining what statistical tests to use.)
 
 We test each heuristic against random.
 1. move_fewest vs. random
@@ -180,15 +180,15 @@ We test each heuristic against random.
 3. large_nums vs. random
 4. constrained_first vs. random
 
-We note that move_fewest, large_nums, and constrained_first often choose the same move. 
+move_fewest, large_nums, and constrained_first often choose the same move. 
 For example, large_nums and move_fewest would both prioritize a (9+1) move, since it contains the largest single number and clears the fewest possible apples.
 We ablate and compare these algorithms as follows.
 
 5. Does the constraint step improve score? `constrained_first -> large_nums -> random` vs. `large_nums -> random`
-6. Does the value step improve score? constrained_first -> `large_nums -> random` vs. `constrained_first -> random`
-7. Does the combination beat move_fewest? constrained_first -> `large_nums -> random` vs. `move_fewest -> random`
+6. Does the value step improve score? `constrained_first -> large_nums -> random` vs. `constrained_first -> random`
+7. Does the combination beat move_fewest? `constrained_first -> large_nums -> random` vs. `move_fewest -> random`
 
-Our motivation for (7.) is that move_fewest is---anecdotally, for me---the easiest heuristic when playing by hand. I want to see if the added complexity from constrained_first or large_nums improves move_fewest at all.
+My motivation for (7.) is that in my experience, move_fewest is the easiest heuristic to follow when playing by hand. I want to see if the added complexity from constrained_first or large_nums improves move_fewest at all.
 
 We store results and random seeds in `evals/results` as json files.
 
