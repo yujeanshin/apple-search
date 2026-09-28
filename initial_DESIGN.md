@@ -158,6 +158,7 @@ Other initial strategies we want to implement are
 | large_nums | Choose the move with the largest numbers. <br> Sort each move's numbers from largest to smallest. Compare only the first 2 apples. |
 | constrained_first | Count the number of moves that include each apple. <br> Sort each move's number-of-moves-per-apple counts from lowest to highest. <br> Choose the move with the lowest counts. When comparing moves with different numbers of apples, only consider the $\text{min(number of apples in a move)}$ lowest counts. |
 | combination | We do several combinations of algorithms as mentioned in the evals/ section. <br> A combination of algorithms A and B into `A -> B -> random` will first find best moves for A; among those, keep the best under B; and then pick at random.
+
 We break ties by random choice.
 
 
